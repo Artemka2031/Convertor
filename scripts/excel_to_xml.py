@@ -198,28 +198,46 @@ def excel_to_xml(input_file, output_file):
         tabl = etree.SubElement(doc, "ТаблСчФакт")
         if not df.empty:
             for _, row in df.iterrows():
-                sved_tov = etree.SubElement(tabl, "СведТов",
-                                            НомСтр=str(row['Номер строки']) if pd.notna(row['Номер строки']) else "",
-                                            НаимТов=str(row['Наименование']) if pd.notna(row['Наименование']) else "",
-                                            КолТов=str(row['Количество']) if pd.notna(row['Количество']) else "",
-                                            НаимЕдИзм=str(row['Ед. измерения']) if pd.notna(
-                                                row['Ед. измерения']) else "",
-                                            ЦенаТов=str(row['Цена']) if pd.notna(row['Цена']) else "",
-                                            СтТовБезНДС=str(row['Стоимость без НДС']) if pd.notna(
-                                                row['Стоимость без НДС']) else "",
-                                            НалСт=str(row['Ставка НДС']) if pd.notna(row['Ставка НДС']) else "",
-                                            СтТовУчНал=str(row['Стоимость с НДС']) if pd.notna(
-                                                row['Стоимость с НДС']) else "",
-                                            ОКЕИ_Тов=str(row['ОКЕИ_Тов']) if pd.notna(row.get('ОКЕИ_Тов')) else "")
+                # Пропускаем строки, где все ключевые поля пустые
+                if not any(pd.notna(row[col]) for col in ['Номер строки', 'Наименование', 'Количество']):
+                    continue
 
-                # СумНал
-                sum_nal = etree.SubElement(sved_tov, "СумНал")
-                etree.SubElement(sum_nal, "СумНал").text = str(row['Сумма НДС']) if pd.notna(row['Сумма НДС']) else ""
+                # Формируем атрибуты для СведТов
+                sved_tov_attrs = {
+                    'НомСтр': str(row['Номер строки']) if pd.notna(row['Номер строки']) else "",
+                    'НаимТов': str(row['Наименование']) if pd.notna(row['Наименование']) else "",
+                    'КолТов': str(row['Количество']) if pd.notna(row['Количество']) else "",
+                    'НаимЕдИзм': str(row['Ед. измерения']) if pd.notna(row['Ед. измерения']) else "",
+                    'ЦенаТов': str(row['Цена']) if pd.notna(row['Цена']) else "",
+                    'СтТовБезНДС': str(row['Стоимость без НДС']) if pd.notna(row['Стоимость без НДС']) else "",
+                    'НалСт': str(row['Ставка НДС']) if pd.notna(row['Ставка НДС']) else "",
+                    'СтТовУчНал': str(row['Стоимость с НДС']) if pd.notna(row['Стоимость с НДС']) else ""
+                }
+                if pd.notna(row.get('ОКЕИ_Тов')):
+                    sved_tov_attrs['ОКЕИ_Тов'] = str(row['ОКЕИ_Тов'])
+
+                sved_tov = etree.SubElement(tabl, "СведТов", **sved_tov_attrs)
+
+                # СвДТ
+                if pd.notna(row.get('КодПроисх')) or pd.notna(row.get('НомерДТ')):
+                    etree.SubElement(sved_tov, "СвДТ",
+                                     КодПроисх=str(row['КодПроисх']) if pd.notna(row.get('КодПроисх')) else "",
+                                     НомерДТ=str(row['НомерДТ']) if pd.notna(row.get('НомерДТ')) else "")
 
                 # ДопСведТов
-                dop_sved = etree.SubElement(sved_tov, "ДопСведТов",
-                                            КодТов=str(row['Код товара']) if pd.notna(row['Код товара']) else "",
-                                            ПрТовРаб="1")
+                dop_sved_attrs = {
+                    'КодТов': str(row['Код товара']) if pd.notna(row.get('Код товара')) else "",
+                    'ПрТовРаб': "1"
+                }
+                # Если есть ГТИН, добавляем его как атрибут
+                if pd.notna(row.get('ГТИН')):
+                    dop_sved_attrs['ГТИН'] = str(row['ГТИН'])
+
+                dop_sved = etree.SubElement(sved_tov, "ДопСведТов", **dop_sved_attrs)
+
+                # КрНаимСтрПр
+                if pd.notna(row.get('КрНаимСтрПр')):
+                    etree.SubElement(dop_sved, "КрНаимСтрПр").text = str(row['КрНаимСтрПр'])
 
                 # КИЗ
                 if pd.notna(row['КИЗ']) and row['КИЗ']:
@@ -231,13 +249,22 @@ def excel_to_xml(input_file, output_file):
                 akciz = etree.SubElement(sved_tov, "Акциз")
                 etree.SubElement(akciz, "БезАкциз").text = "без акциза"
 
+                # СумНал
+                sum_nal = etree.SubElement(sved_tov, "СумНал")
+                sum_nal_value = str(row['Сумма НДС']) if pd.notna(row['Сумма НДС']) else ""
+                if sum_nal_value.lower() in ['без ндс', 'безндс']:
+                    etree.SubElement(sum_nal, "БезНДС").text = "без НДС"
+                elif sum_nal_value:
+                    etree.SubElement(sum_nal, "СумНал").text = sum_nal_value
+
                 # ИнфПолФХЖ2
-                if pd.notna(row['КодПокупателя']) and row['КодПокупателя']:
+                if pd.notna(row.get('КодПокупателя')) and row['КодПокупателя']:
                     etree.SubElement(sved_tov, "ИнфПолФХЖ2", Идентиф="КодПокупателя", Значен=str(row['КодПокупателя']))
-                if pd.notna(row['НазваниеПокупателя']) and row['НазваниеПокупателя']:
+                if pd.notna(row.get('НазваниеПокупателя')) and row['НазваниеПокупателя']:
                     etree.SubElement(sved_tov, "ИнфПолФХЖ2", Идентиф="НазваниеПокупателя",
                                      Значен=str(row['НазваниеПокупателя']))
-                if pd.notna(row['GTIN']) and row['GTIN']:
+                # Используем GTIN из столбца GTIN, если ГТИН уже не добавлен как атрибут
+                if pd.notna(row.get('GTIN')) and row['GTIN'] and not pd.notna(row.get('ГТИН')):
                     etree.SubElement(sved_tov, "ИнфПолФХЖ2", Идентиф="GTIN", Значен=str(row['GTIN']))
     except Exception as e:
         print(f"Ошибка при создании элемента ТаблСчФакт: {e}")

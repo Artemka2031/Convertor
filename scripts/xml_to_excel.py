@@ -222,24 +222,41 @@ def xml_to_excel(input_file, output_file):
         # Извлечение данных о товарах
         try:
             for item in root.findall('.//ТаблСчФакт/СведТов'):
+                dop_sved = item.find('ДопСведТов')
+                sv_dt = item.find('СвДТ')
                 product = {
                     'Номер строки': item.get('НомСтр', ''),
                     'Наименование': item.get('НаимТов', ''),
                     'Количество': item.get('КолТов', ''),
                     'Ед. измерения': item.get('НаимЕдИзм', ''),
-                    'Цена': item.get('Ц ollнаТов', ''),
+                    'Цена': item.get('ЦенаТов', ''),
                     'Стоимость без НДС': item.get('СтТовБезНДС', ''),
-                    'Сумма НДС': item.find('СумНал/СумНал').text if item.find('СумНал/СумНал') is not None else '',
-                    'Стоимость с НДС': item.get('СтТовУчНал', ''),
                     'Ставка НДС': item.get('НалСт', ''),
-                    'Код товара': item.find('ДопСведТов').get('КодТов', '') if item.find(
-                        'ДопСведТов') is not None else '',
+                    'Стоимость с НДС': item.get('СтТовУчНал', ''),
                     'ОКЕИ_Тов': item.get('ОКЕИ_Тов', ''),
+                    'Код товара': dop_sved.get('КодТов', '') if dop_sved is not None else '',
+                    'ГТИН': dop_sved.get('ГТИН', '') if dop_sved is not None else '',  # Новый атрибут
+                    'КрНаимСтрПр': dop_sved.find('КрНаимСтрПр').text if dop_sved is not None and dop_sved.find(
+                        'КрНаимСтрПр') is not None else '',  # Новый элемент
+                    'КодПроисх': sv_dt.get('КодПроисх', '') if sv_dt is not None else '',  # Новый атрибут
+                    'НомерДТ': sv_dt.get('НомерДТ', '') if sv_dt is not None else '',  # Новый атрибут
                     'GTIN': '',
                     'КодПокупателя': '',
                     'НазваниеПокупателя': '',
                     'КИЗ': ''
                 }
+
+                # Извлекаем СумНал или БезНДС
+                sum_nal = item.find('СумНал')
+                if sum_nal is not None:
+                    if sum_nal.find('СумНал') is not None:
+                        product['Сумма НДС'] = sum_nal.find('СумНал').text
+                    elif sum_nal.find('БезНДС') is not None:
+                        product['Сумма НДС'] = sum_nal.find('БезНДС').text
+                    else:
+                        product['Сумма НДС'] = ''
+                else:
+                    product['Сумма НДС'] = ''
 
                 # Извлекаем все ИнфПолФХЖ2
                 for inf in item.findall('.//ИнфПолФХЖ2'):
@@ -264,7 +281,8 @@ def xml_to_excel(input_file, output_file):
     columns_order = [
         'Номер строки', 'Наименование', 'Код товара', 'Количество', 'Ед. измерения',
         'Цена', 'Стоимость без НДС', 'Ставка НДС', 'Сумма НДС', 'Стоимость с НДС',
-        'ОКЕИ_Тов', 'GTIN', 'КодПокупателя', 'НазваниеПокупателя', 'КИЗ'
+        'ОКЕИ_Тов', 'GTIN', 'ГТИН', 'КодПокупателя', 'НазваниеПокупателя', 'КИЗ',
+        'КрНаимСтрПр', 'КодПроисх', 'НомерДТ'
     ]
     try:
         if products:
