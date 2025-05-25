@@ -1,23 +1,25 @@
 import os
 import shutil
+import sys
 import tempfile
+
+# Добавляем корень проекта в sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-# Заменяем на абсолютные импорты
-import excel_to_xml
-import xml_to_excel
+# Теперь используем абсолютные импорты
 from utils import setup_logging
+from excel_to_xml import excel_to_xml
+from xml_to_excel import xml_to_excel
 
-# Остальной код остаётся без изменений
 logger = setup_logging()
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="web"), name="static")
-
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -25,11 +27,9 @@ async def read_root():
     with open("web/index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
-
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
 
 @app.post("/xml-to-excel")
 async def convert_xml_to_excel(file: UploadFile = File(...)):
@@ -55,7 +55,6 @@ async def convert_xml_to_excel(file: UploadFile = File(...)):
         if 'output_file' in locals() and os.path.exists(output_file):
             os.unlink(output_file)
 
-
 @app.post("/excel-to-xml")
 async def convert_excel_to_xml(file: UploadFile = File(...)):
     logger.debug("Получен запрос на конвертацию Excel в XML")
@@ -79,8 +78,6 @@ async def convert_excel_to_xml(file: UploadFile = File(...)):
         if 'output_file' in locals() and os.path.exists(output_file):
             os.unlink(output_file)
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
