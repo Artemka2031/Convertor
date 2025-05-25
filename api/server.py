@@ -1,51 +1,84 @@
-from fastapi import FastAPI, UploadFile, HTTPException
-from fastapi.responses import FileResponse, Response
+import os
+import shutil
+import tempfile
+
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from tempfile import NamedTemporaryFile
-from pathlib import Path
-from scripts.excel_to_xml import excel_to_xml
-from scripts.xml_to_excel import xml_to_excel
 
-app = FastAPI(title="UTD Converter")
+import scripts.excel_to_xml as excel_to_xml
+import scripts.xml_to_excel as xml_to_excel
+from utils import setup_logging
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+# Настройка логирования
+logger = setup_logging()
 
-def _tmp(suffix: str) -> Path:
-    return Path(NamedTemporaryFile(delete=False, suffix=suffix).name)
+app = FastAPI()
 
-# ---------- API ----------------------------------------------------------------
-@app.post("/excel-to-xml", response_class=FileResponse)
-async def excel_to_xml_endpoint(file: UploadFile):
-    if not file.filename.lower().endswith((".xls", ".xlsx")):
-        raise HTTPException(400, "Нужен Excel (.xls/.xlsx)")
-    src, dst = _tmp(".xlsx"), _tmp(".xml")
-    src.write_bytes(await file.read())
+# Монтируем статическую папку (web как static)
+app.mount("/static", StaticFiles(directory="web"), name="static")
 
-    excel_to_xml(src, dst)
-    return FileResponse(dst, media_type="application/xml",
-                        filename=Path(file.filename).with_suffix(".xml").name)
 
-@app.post("/xml-to-excel", response_class=FileResponse)
-async def xml_to_excel_endpoint(file: UploadFile):
-    if not file.filename.lower().endswith(".xml"):
-        raise HTTPException(400, "Нужен XML")
-    src, dst = _tmp(".xml"), _tmp(".xlsx")
-    src.write_bytes(await file.read())
+# Главная страница
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    logger.debug("Запрос главной страницы")
+    with open("web/index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
-    xml_to_excel(src, dst)
-    return FileResponse(dst,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename=Path(file.filename).with_suffix(".xlsx").name)
 
-# ---------- UI -----------------------------------------------------------------
-@app.get("/", response_class=FileResponse)
-async def index():
-    return WEB_DIR / "index.html"
+# Конвертация XML в Excel
+@app.post("/xml-to-excel")
+async def convert_xml_to_excel(file: UploadFile = File(...)):
+    logger.debug("Получен запрос на конвертацию XML в Excel")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            tmp_file_path = tmp_file.name
+        logger.debug(f"Сохранён временный файл XML: {tmp_file_path}")
 
-@app.get("/favicon.ico", response_class=Response)
-async def favicon():
-    # возвращаем 204, чтобы не было 404 в логах
-    return Response(status_code=204)
+        output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx").name
+        xml_to_excel.xml_to_excel(tmp_file_path, output_file)
+        logger.info(f"Файл успешно конвертирован в Excel: {output_file}")
 
-# ---------- статика ------------------------------------------------------------
-app.mount("/static", StaticFiles(directory=WEB_DIR, html=False), name="static")
+        return FileResponse(output_file, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            filename="output.xlsx")
+    except Exception as e:
+        logger.error(f"Ошибка при конвертации XML в Excel: {e}")
+        return {"error": str(e)}
+    finally:
+        if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
+        if 'output_file' in locals() and os.path.exists(output_file):
+            os.unlink(output_file)
+
+
+# Конвертация Excel в XML
+@app.post("/excel-to-xml")
+async def convert_excel_to_xml(file: UploadFile = File(...)):
+    logger.debug("Получен запрос на конвертацию Excel в XML")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            tmp_file_path = tmp_file.name
+        logger.debug(f"Сохранён временный файл Excel: {tmp_file_path}")
+
+        output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xml").name
+        excel_to_xml.excel_to_xml(tmp_file_path, output_file)
+        logger.info(f"Файл успешно конвертирован в XML: {output_file}")
+
+        return FileResponse(output_file, media_type="application/xml", filename="output.xml")
+    except Exception as e:
+        logger.error(f"Ошибка при конвертации Excel в XML: {e}")
+        return {"error": str(e)}
+    finally:
+        if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
+        if 'output_file' in locals() and os.path.exists(output_file):
+            os.unlink(output_file)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
