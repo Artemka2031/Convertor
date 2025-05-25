@@ -1,7 +1,7 @@
 import os
 import shutil
-import sys
 import tempfile
+import sys
 
 # Добавляем корень проекта в sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -10,7 +10,6 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-# Теперь используем абсолютные импорты
 from utils import setup_logging
 from excel_to_xml import excel_to_xml
 from xml_to_excel import xml_to_excel
@@ -44,8 +43,7 @@ async def convert_xml_to_excel(file: UploadFile = File(...)):
         xml_to_excel.xml_to_excel(tmp_file_path, output_file)
         logger.info(f"Файл успешно конвертирован в Excel: {output_file}")
 
-        return FileResponse(output_file, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            filename="output.xlsx")
+        return FileResponse(output_file, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="output.xlsx")
     except Exception as e:
         logger.error(f"Ошибка при конвертации XML в Excel: {e}")
         return {"error": str(e)}
