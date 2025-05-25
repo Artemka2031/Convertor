@@ -1,7 +1,7 @@
 from pathlib import Path
 import argparse
-from scripts.excel_to_xml import excel_to_xml
-from scripts.xml_to_excel import xml_to_excel
+from excel_to_xml import excel_to_xml
+from xml_to_excel import xml_to_excel
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Конвертация Excel ↔ XML (UTD 5.03)")

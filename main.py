@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
-from scripts.xml_to_excel import xml_to_excel
-from scripts.excel_to_xml import excel_to_xml
+from xml_to_excel import xml_to_excel
+from excel_to_xml import excel_to_xml
 
 # Определяем корневую директорию проекта
 if getattr(sys, 'frozen', False):

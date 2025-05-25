@@ -6,31 +6,31 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-import scripts.excel_to_xml as excel_to_xml
-import scripts.xml_to_excel as xml_to_excel
+# Заменяем на абсолютные импорты
+import excel_to_xml
+import xml_to_excel
 from utils import setup_logging
 
-# Настройка логирования
+# Остальной код остаётся без изменений
 logger = setup_logging()
 
 app = FastAPI()
 
-# Монтируем статическую папку (web как static)
 app.mount("/static", StaticFiles(directory="web"), name="static")
 
 
-# Главная страница
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     logger.debug("Запрос главной страницы")
     with open("web/index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-# Конвертация XML в Excel
+
 @app.post("/xml-to-excel")
 async def convert_xml_to_excel(file: UploadFile = File(...)):
     logger.debug("Получен запрос на конвертацию XML в Excel")
@@ -56,7 +56,6 @@ async def convert_xml_to_excel(file: UploadFile = File(...)):
             os.unlink(output_file)
 
 
-# Конвертация Excel в XML
 @app.post("/excel-to-xml")
 async def convert_excel_to_xml(file: UploadFile = File(...)):
     logger.debug("Получен запрос на конвертацию Excel в XML")
