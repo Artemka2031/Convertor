@@ -11,8 +11,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from utils import setup_logging
-from excel_to_xml import excel_to_xml
-from xml_to_excel import xml_to_excel
+import excel_to_xml
+import xml_to_excel
 
 logger = setup_logging()
 
