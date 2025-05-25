@@ -26,6 +26,9 @@ async def read_root():
     with open("web/index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 # Конвертация XML в Excel
 @app.post("/xml-to-excel")
