@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import pandas as pd
 from lxml import etree
+
 from utils import setup_logging
 
 logger = setup_logging()
@@ -12,7 +13,7 @@ EXPECTED_TAGS = {
     'СвСчФакт', 'СвПрод', 'ИдСв', 'СвЮЛУч', 'СвИП', 'Адрес', 'АдрИнф', 'АдрРФ',
     'Контакт', 'ГрузОт', 'ОнЖе', 'ГрузОтпр', 'ГрузПолуч', 'СвПокуп', 'ДокПодтвОтгрНом',
     'ДенИзм', 'Тлф', 'ЭлПочта', 'ИнфПолФХЖ1', 'ТекстИнф', 'ТаблСчФакт', 'СведТов',
-    'ДопСведТов', 'СвДТ', 'СумНал', 'БезНДС', 'ИнфПолФХЖ2', 'КИЗ', 'КрНаимСтрПр',
+    'ДопСведТов', 'СвДТ', 'СумНал', 'БезНДС', 'ИнфПолФХЖ2', 'КИЗ', 'КрНаимСтрPr',
     'Акциз', 'БезАкциз', 'ВсегоОпл', 'Документ', 'НомСредИдентТов', 'СумНалВсего',
     'БанкРекв', 'СвБанк'
 }
@@ -99,7 +100,6 @@ def log_new_tags(root):
             logger.info(f"- Тег: {tag}, Количество: {count}, Местоположение: {location_str}")
     else:
         logger.info("Новых тегов не обнаружено.")
-
 
 def format_address(adr_rf, adr_inf):
     if adr_rf is not None:
@@ -214,9 +214,9 @@ def xml_to_excel(input_file, output_file):
             adres_prod = sv_prod.find('Адрес') if sv_prod is not None else None
             adr_rf_prod = adres_prod.find('АдрРФ') if adres_prod is not None else None
             adr_inf_prod = adres_prod.find('АдрИнф') if adres_prod is not None else None
-            kontakt_prod = sv_prod.find('Контакт') if sv_prod is not None else None
             bank_rekv_prod = sv_prod.find('БанкРекв') if sv_prod is not None else None
             sv_bank_prod = bank_rekv_prod.find('СвБанк') if bank_rekv_prod is not None else None
+            kontakt_prod = sv_prod.find('Контакт') if sv_prod is not None else None
 
             gruz_ot = sv_sch_fakt.find('ГрузОт')
             on_zhe = gruz_ot.find('ОнЖе') if gruz_ot is not None else None
@@ -225,6 +225,8 @@ def xml_to_excel(input_file, output_file):
             sv_yul_uch_gruz_ot = id_sv_gruz_ot.find('СвЮЛУч') if id_sv_gruz_ot is not None else None
             adres_gruz_ot = gruz_otpr.find('Адрес') if gruz_otpr is not None else None
             adr_inf_gruz_ot = adres_gruz_ot.find('АдрИнф') if adres_gruz_ot is not None else None
+            bank_rekv_gruz_ot = gruz_otpr.find('БанкРекв') if gruz_otpr is not None else None
+            sv_bank_gruz_ot = bank_rekv_gruz_ot.find('СвБанк') if bank_rekv_gruz_ot is not None else None
             kontakt_gruz_ot = gruz_otpr.find('Контакт') if gruz_otpr is not None else None
 
             gruz_poluch = sv_sch_fakt.find('ГрузПолуч')
@@ -233,9 +235,9 @@ def xml_to_excel(input_file, output_file):
             fio_gruz_poluch = sv_ip_gruz_poluch.find('ФИО') if sv_ip_gruz_poluch is not None else None
             adres_gruz_poluch = gruz_poluch.find('Адрес') if gruz_poluch is not None else None
             adr_rf_gruz_poluch = adres_gruz_poluch.find('АдрРФ') if adres_gruz_poluch is not None else None
-            kontakt_gruz_poluch = gruz_poluch.find('Контакт') if gruz_poluch is not None else None
             bank_rekv_gruz_poluch = gruz_poluch.find('БанкРекв') if gruz_poluch is not None else None
             sv_bank_gruz_poluch = bank_rekv_gruz_poluch.find('СвБанк') if bank_rekv_gruz_poluch is not None else None
+            kontakt_gruz_poluch = gruz_poluch.find('Контакт') if gruz_poluch is not None else None
 
             sv_pokup = sv_sch_fakt.find('СвПокуп')
             id_sv_pokup = sv_pokup.find('ИдСв') if sv_pokup is not None else None
@@ -244,14 +246,13 @@ def xml_to_excel(input_file, output_file):
             adres_pokup = sv_pokup.find('Адрес') if sv_pokup is not None else None
             adr_rf_pokup = adres_pokup.find('АдрРФ') if adres_pokup is not None else None
             adr_inf_pokup = adres_pokup.find('АдрИнф') if adres_pokup is not None else None
-            kontakt_pokup = sv_pokup.find('Контакт') if sv_pokup is not None else None
             bank_rekv_pokup = sv_pokup.find('БанкРекв') if sv_pokup is not None else None
             sv_bank_pokup = bank_rekv_pokup.find('СвБанк') if bank_rekv_pokup is not None else None
+            kontakt_pokup = sv_pokup.find('Контакт') if sv_pokup is not None else None
 
             dok_podtv = sv_sch_fakt.find('ДокПодтвОтгрНом')
             den_izm = sv_sch_fakt.find('ДенИзм')
 
-            # Обновление данных с явной проверкой и преобразованием в скалярные значения
             sv_sch_fakt_data.update({
                 'ДатаДок': str(sv_sch_fakt.get('ДатаДок', '')),
                 'НомерДок': str(sv_sch_fakt.get('НомерДок', '')),
@@ -265,21 +266,26 @@ def xml_to_excel(input_file, output_file):
                 'Имя_СвПрод': str(fio_prod.get('Имя', '')) if fio_prod is not None else '',
                 'Отчество_СвПрод': str(fio_prod.get('Отчество', '')) if fio_prod is not None else '',
                 'Адрес_СвПрод': format_address(adr_rf_prod, adr_inf_prod),
+                'НомерСчета_СвПрод': str(bank_rekv_prod.get('НомерСчета', '')) if bank_rekv_prod is not None else '',
+                'БИК_СвПрод': str(sv_bank_prod.get('БИК', '')) if sv_bank_prod is not None else '',
+                'НаимБанк_СвПрод': str(sv_bank_prod.get('НаимБанк', '')) if sv_bank_prod is not None else '',
+                'КорСчет_СвПрод': str(sv_bank_prod.get('КорСчет', '')) if sv_bank_prod is not None else '',
                 'Тлф_СвПрод': str(kontakt_prod.find('Тлф').text) if kontakt_prod is not None and kontakt_prod.find(
                     'Тлф') is not None else '',
                 'ЭлПочта_СвПрод': str(
                     kontakt_prod.find('ЭлПочта').text) if kontakt_prod is not None and kontakt_prod.find(
                     'ЭлПочта') is not None else '',
-                'НомерСчета_СвПрод': str(bank_rekv_prod.get('НомерСчета', '')) if bank_rekv_prod is not None else '',
-                'БИК_СвПрод': str(sv_bank_prod.get('БИК', '')) if sv_bank_prod is not None else '',
-                'НаимБанк_СвПрод': str(sv_bank_prod.get('НаимБанк', '')) if sv_bank_prod is not None else '',
-                'КорСчет_СвПрод': str(sv_bank_prod.get('КорСчет', '')) if sv_bank_prod is not None else '',
                 'ОнЖе_ГрузОт': str(on_zhe.text) if on_zhe is not None else '',
                 'ОКПО_ГрузОт': str(gruz_otpr.get('ОКПО', '')) if gruz_otpr is not None else '',
                 'ИННЮЛ_ГрузОт': str(sv_yul_uch_gruz_ot.get('ИННЮЛ', '')) if sv_yul_uch_gruz_ot is not None else '',
                 'КПП_ГрузОт': str(sv_yul_uch_gruz_ot.get('КПП', '')) if sv_yul_uch_gruz_ot is not None else '',
                 'НаимОрг_ГрузОт': str(sv_yul_uch_gruz_ot.get('НаимОрг', '')) if sv_yul_uch_gruz_ot is not None else '',
                 'Адрес_ГрузОт': format_address(None, adr_inf_gruz_ot),
+                'НомерСчета_ГрузОт': str(
+                    bank_rekv_gruz_ot.get('НомерСчета', '')) if bank_rekv_gruz_ot is not None else '',
+                'БИК_ГрузОт': str(sv_bank_gruz_ot.get('БИК', '')) if sv_bank_gruz_ot is not None else '',
+                'НаимБанк_ГрузОт': str(sv_bank_gruz_ot.get('НаимБанк', '')) if sv_bank_gruz_ot is not None else '',
+                'КорСчет_ГрузОт': str(sv_bank_gruz_ot.get('КорСчет', '')) if sv_bank_gruz_ot is not None else '',
                 'Тлф_ГрузОт': str(
                     kontakt_gruz_ot.find('Тлф').text) if kontakt_gruz_ot is not None and kontakt_gruz_ot.find(
                     'Тлф') is not None else '',
@@ -295,12 +301,6 @@ def xml_to_excel(input_file, output_file):
                 'Имя_ГрузПолуч': str(fio_gruz_poluch.get('Имя', '')) if fio_gruz_poluch is not None else '',
                 'Отчество_ГрузПолуч': str(fio_gruz_poluch.get('Отчество', '')) if fio_gruz_poluch is not None else '',
                 'Адрес_ГрузПолуч': format_address(adr_rf_gruz_poluch, None),
-                'Тлф_ГрузПолуч': str(kontakt_gruz_poluch.find(
-                    'Тлф').text) if kontakt_gruz_poluch is not None and kontakt_gruz_poluch.find(
-                    'Тлф') is not None else '',
-                'ЭлПочта_ГрузПолуч': str(kontakt_gruz_poluch.find(
-                    'ЭлПочта').text) if kontakt_gruz_poluch is not None and kontakt_gruz_poluch.find(
-                    'ЭлПочта') is not None else '',
                 'НомерСчета_ГрузПолуч': str(
                     bank_rekv_gruz_poluch.get('НомерСчета', '')) if bank_rekv_gruz_poluch is not None else '',
                 'БИК_ГрузПолуч': str(sv_bank_gruz_poluch.get('БИК', '')) if sv_bank_gruz_poluch is not None else '',
@@ -308,6 +308,12 @@ def xml_to_excel(input_file, output_file):
                     sv_bank_gruz_poluch.get('НаимБанк', '')) if sv_bank_gruz_poluch is not None else '',
                 'КорСчет_ГрузПолуч': str(
                     sv_bank_gruz_poluch.get('КорСчет', '')) if sv_bank_gruz_poluch is not None else '',
+                'Тлф_ГрузПолуч': str(kontakt_gruz_poluch.find(
+                    'Тлф').text) if kontakt_gruz_poluch is not None and kontakt_gruz_poluch.find(
+                    'Тлф') is not None else '',
+                'ЭлПочта_ГрузПолуч': str(kontakt_gruz_poluch.find(
+                    'ЭлПочта').text) if kontakt_gruz_poluch is not None and kontakt_gruz_poluch.find(
+                    'ЭлПочта') is not None else '',
                 'ОКПО_СвПокуп': str(sv_pokup.get('ОКПО', '')) if sv_pokup is not None else '',
                 'СокрНаим_СвПокуп': str(sv_pokup.get('СокрНаим', '')) if sv_pokup is not None else '',
                 'ИННФЛ_СвПокуп': str(sv_ip_pokup.get('ИННФЛ', '')) if sv_ip_pokup is not None else '',
@@ -316,15 +322,15 @@ def xml_to_excel(input_file, output_file):
                 'Имя_СвПокуп': str(fio_pokup.get('Имя', '')) if fio_pokup is not None else '',
                 'Отчество_СвПокуп': str(fio_pokup.get('Отчество', '')) if fio_pokup is not None else '',
                 'Адрес_СвПокуп': format_address(adr_rf_pokup, adr_inf_pokup),
+                'НомерСчета_СвПокуп': str(bank_rekv_pokup.get('НомерСчета', '')) if bank_rekv_pokup is not None else '',
+                'БИК_СвПокуп': str(sv_bank_pokup.get('БИК', '')) if sv_bank_pokup is not None else '',
+                'НаимБанк_СвПокуп': str(sv_bank_pokup.get('НаимБанк', '')) if sv_bank_pokup is not None else '',
+                'КорСчет_СвПокуп': str(sv_bank_pokup.get('КорСчет', '')) if sv_bank_pokup is not None else '',
                 'Тлф_СвПокуп': str(kontakt_pokup.find('Тлф').text) if kontakt_pokup is not None and kontakt_pokup.find(
                     'Тлф') is not None else '',
                 'ЭлПочта_СвПокуп': str(
                     kontakt_pokup.find('ЭлПочта').text) if kontakt_pokup is not None and kontakt_pokup.find(
                     'ЭлПочта') is not None else '',
-                'НомерСчета_СвПокуп': str(bank_rekv_pokup.get('НомерСчета', '')) if bank_rekv_pokup is not None else '',
-                'БИК_СвПокуп': str(sv_bank_pokup.get('БИК', '')) if sv_bank_pokup is not None else '',
-                'НаимБанк_СвПокуп': str(sv_bank_pokup.get('НаимБанк', '')) if sv_bank_pokup is not None else '',
-                'КорСчет_СвПокуп': str(sv_bank_pokup.get('КорСчет', '')) if sv_bank_pokup is not None else '',
                 'РеквДатаДок_ДокПодтв': str(dok_podtv.get('РеквДатаДок', '')) if dok_podtv is not None else '',
                 'РеквНаимДок_ДокПодтв': str(dok_podtv.get('РеквНаимДок', '')) if dok_podtv is not None else '',
                 'РеквНомерДок_ДокПодтв': str(dok_podtv.get('РеквНомерДок', '')) if dok_podtv is not None else '',
@@ -332,21 +338,8 @@ def xml_to_excel(input_file, output_file):
                 'НаимОКВ': str(den_izm.get('НаимОКВ', '')) if den_izm is not None else ''
             })
 
-            # Преобразование всех значений в строки для обеспечения единообразия
             for key in sv_sch_fakt_data:
                 sv_sch_fakt_data[key] = str(sv_sch_fakt_data[key]) if sv_sch_fakt_data[key] is not None else ''
-
-            # Применение логики для строковых полей
-            for key, value in sv_sch_fakt_data.items():
-                if key in STRING_FIELDS and value:
-                    try:
-                        sv_sch_fakt_data[key] = str(int(float(value)))
-                    except (ValueError, TypeError):
-                        sv_sch_fakt_data[key] = str(value)
-
-            if sv_sch_fakt_data['КодОКВ']:
-                sv_sch_fakt_data['КодОКВ'] = '643'
-                sv_sch_fakt_data['НаимОКВ'] = 'Российский рубль'
 
             logger.debug(f"Данные СвСчФакт после обработки: {sv_sch_fakt_data}")
 
@@ -383,8 +376,8 @@ def xml_to_excel(input_file, output_file):
                     'Код товара': dop_sved.get('КодТов', '') if dop_sved is not None else '',
                     'КодВидТов': dop_sved.get('КодВидТов', '') if dop_sved is not None else '',
                     'ГТИН': dop_sved.get('ГТИН', '') if dop_sved is not None else '',
-                    'КрНаимСтрПр': dop_sved.find('КрНаимСтрПр').text if dop_sved is not None and dop_sved.find(
-                        'КрНаимСтрПр') is not None else '',
+                    'КрНаимСтрPr': dop_sved.find('КрNaимСтрPr').text if dop_sved is not None and dop_sved.find(
+                        'КрNaимСтрPr') is not None else '',
                     'КодПроисх': sv_dt.get('КодПроисх', '') if sv_dt is not None else '',
                     'НомерДТ': sv_dt.get('НомерДТ', '') if sv_dt is not None else '',
                     'GTIN': '',
@@ -465,9 +458,27 @@ def xml_to_excel(input_file, output_file):
             df_inf_pol.to_excel(writer, sheet_name='ИнфПолФХЖ1', index=False)
             df_file = pd.DataFrame([file_data])
             df_file.to_excel(writer, sheet_name='Файл', index=False)
-            # Исправление: унифицируем длину списков
             data = {}
-            if total_payment or total_tax or total_with_tax:
+            if tab_sch_fakt is not None and tab_sch_fakt.find('.//ВсегоОпл') is not None:
+                vsego_opl = tab_sch_fakt.find('.//ВсегоОпл')
+                st_tov_uch_nal = vsego_opl.get('СтТовУчНалВсего', '')
+                if st_tov_uch_nal:
+                    data['СтТовУчНалВсего'] = [str(st_tov_uch_nal)]
+                    # Если есть БезНДС, СтТовБезНДСВсего равно СтТовУчНалВсего
+                    if vsego_opl.find('.//СумНалВсего/БезНДС') is not None:
+                        data['СтТовБезНДСВсего'] = [str(st_tov_uch_nal)]
+                        data['СумНалВсего'] = ['0.00']
+                    else:
+                        st_tov_bez_nds = vsego_opl.get('СтТовБезНДСВсего', '')
+                        if st_tov_bez_nds:
+                            data['СтТовБезНДСВсего'] = [str(st_tov_bez_nds)]
+                        sum_nal = vsego_opl.find('.//СумНалВсего/СумНал')
+                        if sum_nal is not None and sum_nal.text:
+                            data['СумНалВсего'] = [str(sum_nal.text)]
+                        else:
+                            data['СумНалВсего'] = ['']
+                data['ВсегоОпл'] = [str(total_payment)] if total_payment else ['']
+            elif total_payment or total_tax or total_with_tax:
                 data['ВсегоОпл'] = [str(total_payment)] if total_payment else ['']
                 data['СумНалВсего'] = [str(total_tax)] if total_tax else ['']
                 data['СтТовУчНалВсего'] = [str(total_with_tax)] if total_with_tax else ['']

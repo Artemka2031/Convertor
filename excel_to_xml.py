@@ -2,15 +2,10 @@ from pathlib import Path
 
 import pandas as pd
 from lxml import etree
+
 from utils import setup_logging
 
 logger = setup_logging()
-
-STRING_FIELDS = [
-    'ОКПО_СвПрод', 'ИННФЛ_СвПрод', 'ОКПО_ГрузОт', 'ОКПО_ГрузПолуч', 'ИННФЛ_ГрузПолуч',
-    'ОКПО_СвПокуп', 'ИННФЛ_СвПокуп', 'КодОКВ', 'БИК_СвПрод', 'БИК_СвПокуп',
-    'НомерСчета_СвПрод', 'НомерСчета_СвПокуп', 'НомерСчета_ГрузПолуч'
-]
 
 
 def parse_address(address_str):
@@ -22,6 +17,7 @@ def parse_address(address_str):
     elif 'АдрТекст' in parts or 'КодСтр' in parts:
         return 'АдрИнф', parts
     return None, None
+
 
 def excel_to_xml(input_file, output_file):
     output_path = Path(output_file)
@@ -89,13 +85,6 @@ def excel_to_xml(input_file, output_file):
         logger.error(f"Ошибка при чтении листа Итоги: {e}")
         totals = {}
 
-    for key, value in sv_sch_fakt.items():
-        if key in STRING_FIELDS and value:
-            try:
-                sv_sch_fakt[key] = str(int(float(value)))
-            except (ValueError, TypeError):
-                sv_sch_fakt[key] = str(value)
-
     sv_sch_fakt['КодОКВ'] = '643'
     sv_sch_fakt['НаимОКВ'] = 'Российский рубль'
 
@@ -141,19 +130,18 @@ def excel_to_xml(input_file, output_file):
                          АдрТекст=str(adres_parts.get('АдрТекст', '')),
                          КодСтр=str(adres_parts.get('КодСтр', '')),
                          НаимСтран=str(adres_parts.get('НаимСтран', '')))
-    if sv_sch_fakt.get('Тлф_СвПрод') or sv_sch_fakt.get('ЭлПочта_СвПрод'):
-        kontakt = etree.SubElement(sv_prod, "Контакт")
-        if sv_sch_fakt.get('Тлф_СвПрод'):
-            etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_СвПрод', ''))
-        if sv_sch_fakt.get('ЭлПочта_СвПрод'):
-            etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_СвПрод', ''))
-
     if sv_sch_fakt.get('НомерСчета_СвПрод') or sv_sch_fakt.get('БИК_СвПрод') or sv_sch_fakt.get('НаимБанк_СвПрод'):
         bank_rekv = etree.SubElement(sv_prod, "БанкРекв", НомерСчета=str(sv_sch_fakt.get('НомерСчета_СвПрод', '')))
         etree.SubElement(bank_rekv, "СвБанк",
                          БИК=str(sv_sch_fakt.get('БИК_СвПрод', '')),
                          НаимБанк=str(sv_sch_fakt.get('НаимБанк_СвПрод', '')),
                          КорСчет=str(sv_sch_fakt.get('КорСчет_СвПрод', '')))
+    if sv_sch_fakt.get('Тлф_СвПрод') or sv_sch_fakt.get('ЭлПочта_СвПрод'):
+        kontakt = etree.SubElement(sv_prod, "Контакт")
+        if sv_sch_fakt.get('Тлф_СвПрод'):
+            etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_СвПрод', ''))
+        if sv_sch_fakt.get('ЭлПочта_СвПрод'):
+            etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_СвПрод', ''))
 
     gruz_ot = etree.SubElement(sv_sch_fakt_elem, "ГрузОт")
     if sv_sch_fakt.get('ОнЖе_ГрузОт'):
@@ -172,6 +160,13 @@ def excel_to_xml(input_file, output_file):
                              АдрТекст=str(adres_parts.get('АдрТекст', '')),
                              КодСтр=str(adres_parts.get('КодСтр', '')),
                              НаимСтран=str(adres_parts.get('НаимСтран', '')))
+        if sv_sch_fakt.get('НомерСчета_ГрузОт') or sv_sch_fakt.get('БИК_ГрузОт') or sv_sch_fakt.get('НаимБанк_ГрузОт'):
+            bank_rekv = etree.SubElement(gruz_otpr, "БанкРекв",
+                                         НомерСчета=str(sv_sch_fakt.get('НомерСчета_ГрузОт', '')))
+            etree.SubElement(bank_rekv, "СвБанк",
+                             БИК=str(sv_sch_fakt.get('БИК_ГрузОт', '')),
+                             НаимБанк=str(sv_sch_fakt.get('НаимБанк_ГрузОт', '')),
+                             КорСчет=str(sv_sch_fakt.get('КорСчет_ГрузОт', '')))
         kontakt = etree.SubElement(gruz_otpr, "Контакт")
         etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_ГрузОт', ''))
         etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_ГрузОт', ''))
@@ -204,12 +199,6 @@ def excel_to_xml(input_file, output_file):
             if adres_parts.get('Дом'):
                 adr_rf_attrs['Дом'] = str(adres_parts.get('Дом', ''))
             etree.SubElement(adres, "АдрРФ", **adr_rf_attrs)
-        if sv_sch_fakt.get('Тлф_ГрузПолуч') or sv_sch_fakt.get('ЭлПочта_ГрузПолуч'):
-            kontakt = etree.SubElement(gruz_poluch, "Контакт")
-            if sv_sch_fakt.get('Тлф_ГрузПолуч'):
-                etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_ГрузПолуч', ''))
-            if sv_sch_fakt.get('ЭлПочта_ГрузПолуч'):
-                etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_ГрузПолуч', ''))
         if sv_sch_fakt.get('НомерСчета_ГрузПолуч') or sv_sch_fakt.get('БИК_ГрузПолуч') or sv_sch_fakt.get(
                 'НаимБанк_ГрузПолуч'):
             bank_rekv = etree.SubElement(gruz_poluch, "БанкРекв",
@@ -218,6 +207,12 @@ def excel_to_xml(input_file, output_file):
                              БИК=str(sv_sch_fakt.get('БИК_ГрузПолуч', '')),
                              НаимБанк=str(sv_sch_fakt.get('НаимБанк_ГрузПолуч', '')),
                              КорСчет=str(sv_sch_fakt.get('КорСчет_ГрузПолуч', '')))
+        if sv_sch_fakt.get('Тлф_ГрузПолуч') or sv_sch_fakt.get('ЭлПочта_ГрузПолуч'):
+            kontakt = etree.SubElement(gruz_poluch, "Контакт")
+            if sv_sch_fakt.get('Тлф_ГрузПолуч'):
+                etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_ГрузПолуч', ''))
+            if sv_sch_fakt.get('ЭлПочта_ГрузПолуч'):
+                etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_ГрузПолуч', ''))
 
     etree.SubElement(sv_sch_fakt_elem, "ДокПодтвОтгрНом",
                      РеквДатаДок=str(sv_sch_fakt.get('РеквДатаДок_ДокПодтв', '')),
@@ -248,13 +243,6 @@ def excel_to_xml(input_file, output_file):
                          АдрТекст=str(adres_parts.get('АдрТекст', '')),
                          КодСтр=str(adres_parts.get('КодСтр', '')),
                          НаимСтран=str(adres_parts.get('НаимСтран', '')))
-    if sv_sch_fakt.get('Тлф_СвПокуп') or sv_sch_fakt.get('ЭлПочта_СвПокуп'):
-        kontakt = etree.SubElement(sv_pokup, "Контакт")
-        if sv_sch_fakt.get('Тлф_СвПокуп'):
-            etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_СвПокуп', ''))
-        if sv_sch_fakt.get('ЭлПочта_СвПокуп'):
-            etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_СвПокуп', ''))
-
     if sv_sch_fakt.get('НомерСчета_СвПокуп') or sv_sch_fakt.get('БИК_СвПокуп') or sv_sch_fakt.get('НаимБанк_СвПокуп'):
         bank_rekv = etree.SubElement(sv_pokup, "БанкРекв",
                                      НомерСчета=str(sv_sch_fakt.get('НомерСчета_СвПокуп', '')))
@@ -262,26 +250,18 @@ def excel_to_xml(input_file, output_file):
                          БИК=str(sv_sch_fakt.get('БИК_СвПокуп', '')),
                          НаимБанк=str(sv_sch_fakt.get('НаимБанк_СвПокуп', '')),
                          КорСчет=str(sv_sch_fakt.get('КорСчет_СвПокуп', '')))
+    if sv_sch_fakt.get('Тлф_СвПокуп') or sv_sch_fakt.get('ЭлПочта_СвПокуп'):
+        kontakt = etree.SubElement(sv_pokup, "Контакт")
+        if sv_sch_fakt.get('Тлф_СвПокуп'):
+            etree.SubElement(kontakt, "Тлф").text = str(sv_sch_fakt.get('Тлф_СвПокуп', ''))
+        if sv_sch_fakt.get('ЭлПочта_СвПокуп'):
+            etree.SubElement(kontakt, "ЭлПочта").text = str(sv_sch_fakt.get('ЭлПочта_СвПокуп', ''))
 
     etree.SubElement(sv_sch_fakt_elem, "ДенИзм",
                      КодОКВ=str(sv_sch_fakt.get('КодОКВ', '')),
                      НаимОКВ=str(sv_sch_fakt.get('НаимОКВ', '')))
 
     tabl = etree.SubElement(doc, "ТаблСчФакт")
-    if totals.get('ВсегоОпл') or totals.get('СумНалВсего'):
-        vsego_opl_attrs = {}
-        # Проверка на nan перед использованием
-        total_opl_value = totals.get('ВсегоОпл', '')
-        if pd.isna(total_opl_value) or total_opl_value.lower() == 'nan':
-            logger.warning("Значение ВсегоОпл содержит nan, будет проигнорировано.")
-        elif total_opl_value:
-            vsego_opl_attrs['СтТовБезНДСВсего'] = str(total_opl_value)
-        if totals.get('СумНалВсего'):
-            vsego_opl_attrs['СумНалВсего'] = str(totals.get('СумНалВсего'))
-        vsego_opl = etree.SubElement(tabl, "ВсегоОпл", **vsego_opl_attrs)
-        if totals.get('СумНалВсего'):
-            sum_nal_vsego = etree.SubElement(vsego_opl, "СумНалВсего")
-            etree.SubElement(sum_nal_vsego, "СумНал").text = str(totals.get('СумНалВсего'))
 
     if not df.empty:
         for _, row in df.iterrows():
@@ -354,6 +334,43 @@ def excel_to_xml(input_file, output_file):
                                  Значен=str(row['НазваниеПокупателя']))
             if pd.notna(row.get('GTIN')) and row['GTIN'] and not pd.notna(row.get('ГТИН')):
                 etree.SubElement(sved_tov, "ИнфПолФХЖ2", Идентиф="GTIN", Значен=str(row['GTIN']))
+
+    # Создание блока ВсегоОпл после всех товаров
+    if totals.get('СумНалВсего') or totals.get('СтТовУчНалВсего'):
+        vsego_opl_attrs = {}
+
+        # Вычисляем СтТовБезНДСВсего, если его нет в totals
+        if 'СтТовБезНДСВсего' not in totals or pd.isna(totals.get('СтТовБезНДСВсего')) or totals.get(
+                'СтТовБезНДСВсего') == '':
+            if totals.get('СтТовУчНалВсего') and totals.get('СумНалВсего'):
+                try:
+                    st_tov_with_tax = float(totals.get('СтТовУчНалВсего'))
+                    tax_total = float(totals.get('СумНалВсего'))
+                    st_tov_without_tax = st_tov_with_tax - tax_total
+                    vsego_opl_attrs['СтТовБезНДСВсего'] = f"{st_tov_without_tax:.2f}"
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Не удалось вычислить СтТовБезНДСВсего: {e}")
+            else:
+                logger.warning(
+                    "Недостаточно данных для вычисления СтТовБезНДСВсего (СтТовУчНалВсего или СумНалВсего отсутствуют).")
+        else:
+            vsego_opl_attrs['СтТовБезНДСВсего'] = str(totals.get('СтТовБезНДСВсего'))
+
+        # Добавляем СтТовУчНалВсего
+        if totals.get('СтТовУчНалВсего'):
+            total_with_tax = totals.get('СтТовУчНалВсего')
+            if pd.isna(total_with_tax) or str(total_with_tax).lower() == 'nan':
+                logger.warning("Значение СтТовУчНалВсего содержит nan, будет проигнорировано.")
+            else:
+                vsego_opl_attrs['СтТовУчНалВсего'] = str(total_with_tax)
+
+        # Создаём элемент ВсегоОпл с атрибутами
+        vsego_opl = etree.SubElement(tabl, "ВсегоОпл", **vsego_opl_attrs)
+
+        # Добавляем вложенный элемент СумНалВсего
+        if totals.get('СумНалВсего'):
+            sum_nal_vsego = etree.SubElement(vsego_opl, "СумНалВсего")
+            etree.SubElement(sum_nal_vsego, "СумНал").text = str(totals.get('СумНалВсего'))
 
     sv_prod_per_elem = etree.SubElement(doc, "СвПродПер")
     sv_per = etree.SubElement(sv_prod_per_elem, "СвПер",
