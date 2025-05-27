@@ -62,9 +62,10 @@ async def convert_xml_to_excel(file: UploadFile = File(...)):
             filename=output_filename
         )
         return response
-    except Exception as e:
-        logger.error(f"Ошибка при конвертации XML в Excel: {e}")
-        return {"error": str(e)}
+    except Exception:
+        raise
+        # logger.error(f"Ошибка при конвертации XML в Excel: {e}")
+        # return {"error": str(e)}
     finally:
         # Удаляем входной файл после обработки
         if 'input_path' in locals() and os.path.exists(input_path):
@@ -98,8 +99,9 @@ async def convert_excel_to_xml(file: UploadFile = File(...)):
         )
         return response
     except Exception as e:
-        logger.error(f"Ошибка при конвертации Excel в XML: {e}")
-        return {"error": str(e)}
+        raise
+        # logger.error(f"Ошибка при конвертации Excel в XML: {e}")
+        # return {"error": str(e)}
     finally:
         # Удаляем входной файл после обработки
         if 'input_path' in locals() and os.path.exists(input_path):
